@@ -1,0 +1,280 @@
+#include<SoftwareSerial.h>
+#include <LiquidCrystal_I2C.h>
+#include <Servo.h>
+#include <GPRS_Shield_Arduino.h>
+#include <Wire.h>
+
+#define PIN_TX    9
+#define PIN_RX    10
+#define BAUDRATE  9600
+#define PHONE_NUMBER "7993311126"
+
+GPRS gprs(PIN_TX, PIN_RX, BAUDRATE); //RX,TX,BaudRate
+
+
+#define r1 2
+#define r2 3
+#define r3 4
+#define r4 5
+#define c3 6
+#define c2 7
+#define c1 8
+#define sw 12
+
+Servo ser;
+int lcdColumns = 16;
+int lcdRows = 2;
+LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+char MESSAGE[20];
+
+unsigned char key()
+{
+  for(int i=2;i<10;i++)
+  {
+    digitalWrite(i,HIGH);
+  }
+  while(1)
+  {
+    digitalWrite(r1,LOW);
+    
+    if(digitalRead(c3)==LOW)
+    {
+      while(digitalRead(c3)==LOW);
+      delay(50);
+      return '1';
+    }
+    if(digitalRead(c2)==LOW)
+    {
+      while(digitalRead(c2)==LOW);
+      delay(50);
+      return '2';
+    }
+    if(digitalRead(c1)==LOW)
+    {
+      while(digitalRead(c1)==LOW);
+      delay(50);
+      return '3';
+    }
+    digitalWrite(r1,HIGH);
+    digitalWrite(r2,LOW);
+    if(digitalRead(c3)==LOW)
+    {
+      while(digitalRead(c3)==LOW);
+      delay(50);
+      return '4';
+    }
+    if(digitalRead(c2)==LOW)
+    {
+      while(digitalRead(c2)==LOW);
+      delay(50);
+      return '5';
+    }
+    if(digitalRead(c1)==LOW)
+    {
+      while(digitalRead(c1)==LOW);
+      delay(50);
+      return '6';
+    }
+    digitalWrite(r2,HIGH);
+    digitalWrite(r3,LOW);
+    if(digitalRead(c3)==LOW)
+    {
+      while(digitalRead(c3)==LOW);
+      delay(50);
+      return '7';
+    }
+    if(digitalRead(c2)==LOW)
+    {
+      while(digitalRead(c2)==LOW);
+      delay(50);
+      return '8';
+    }
+    if(digitalRead(c1)==LOW)
+    {
+      while(digitalRead(c1)==LOW);
+      delay(50);
+      return '9';
+    }
+    digitalWrite(r3,HIGH);
+    digitalWrite(r4,LOW);
+    if(digitalRead(c3)==LOW)
+    {
+      while(digitalRead(c3)==LOW);
+      delay(50);
+      return '*';
+    }
+    if(digitalRead(c2)==LOW)
+    {
+      while(digitalRead(c2)==LOW);
+      delay(50);
+      return '0';
+    }
+    if(digitalRead(c1)==LOW)
+    {
+      while(digitalRead(c1)==LOW);
+      delay(50);
+      return '#';
+    }
+    digitalWrite(r4,HIGH);
+  }
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  gprs.checkPowerUp();
+    Serial.begin(9600);
+
+    while (!gprs.init()) {
+        delay(1000);
+        Serial.println("Initialization failed!");
+    }
+
+    while (!gprs.isNetworkRegistered()) {
+        delay(1000);
+        Serial.println("Network has not registered yet!");
+    }
+  ser.attach(11);
+  ser.write(0);
+  lcd.init();                     
+  lcd.backlight();
+  pinMode(sw,INPUT_PULLUP);
+  digitalWrite(sw,HIGH);
+  for(int i=2;i<6;i++)
+  {
+    pinMode(i,OUTPUT);
+    digitalWrite(i,HIGH);
+  }
+  for(int i=6;i<10;i++)
+  {
+    pinMode(i,INPUT_PULLUP);
+  }
+  lcd.clear();
+  lcd.print(" Password based");
+  lcd.setCursor(0,1);
+  lcd.print("Door Lock System");
+  delay(100);
+}
+
+char password[] = "1234",dummy[5],val,otp_string[5];
+int otp;
+void get_password()
+{
+  unsigned char i;
+  for(i=0;i<4;i++)
+  {
+    dummy[i] = key();
+    lcd.write(dummy[i]);
+    Serial.println(dummy[i]);
+  }
+  dummy[i] = '\0';
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+    val = key();
+    //Serial.println(val);
+    if(val == '1')
+    {
+      lcd.clear();
+      lcd.print("Enter password: ");
+      lcd.setCursor(0,1);
+      get_password();
+      if(strcmp(password,dummy) == 0)
+      {
+        lcd.clear();
+        lcd.print("Password Matched");
+        ser.write(90);
+        delay(5000);
+        ser.write(0);
+        lcd.clear();
+        lcd.print(" Password based");
+        lcd.setCursor(0,1);
+        lcd.print("Door Lock System");
+      }
+      else
+      {
+        lcd.clear();
+        lcd.print("Wrong Password");
+        delay(3000);
+        lcd.clear();
+        lcd.print(" Password based");
+        lcd.setCursor(0,1);
+        lcd.print("Door Lock System");
+      }
+    }
+    else if(val == '2')
+    {
+      lcd.clear();
+      lcd.print("Nter Old Pasword");
+      lcd.setCursor(0,1);
+      get_password();
+      if(strcmp(password,dummy) == 0)
+      {
+        lcd.clear();
+        lcd.print("Nter New Pasword");
+        lcd.setCursor(0,1);
+        get_password();
+        strcpy(password,dummy);
+        lcd.clear();
+        lcd.print("  Password Set");
+        delay(3000);
+        lcd.clear();
+        lcd.print(" Password based");
+        lcd.setCursor(0,1);
+        lcd.print("Door Lock System");
+      }
+      else
+      {
+        lcd.clear();
+        lcd.print(" Wrong Password");
+        lcd.setCursor(0,1);
+        lcd.print("   Try Again");
+        delay(3000);
+        lcd.clear();
+        lcd.print(" Password based");
+        lcd.setCursor(0,1);
+        lcd.print("Door Lock System");
+      }
+    }
+    else if(val == '*')
+    {
+      otp = millis()%10000;
+      for(int k=4;k>0;k--)
+      {
+        otp_string[k-1] = (otp%10) + 48;
+        otp /= 10;
+      }
+      otp_string[4] = '\0';
+      strcpy(MESSAGE,"Otp is ");;
+      strcat(MESSAGE,otp_string);
+      gprs.sendSMS(PHONE_NUMBER, MESSAGE);
+      Serial.println(MESSAGE);
+      delay(50);
+      lcd.clear();
+      lcd.print("Enter Otp: ");
+      lcd.setCursor(0,1);
+      get_password();
+      if(strcmp(otp_string,dummy) == 0)
+      {
+        lcd.clear();
+        lcd.print("  Otp Matched");
+        ser.write(90);
+        delay(5000);
+        ser.write(0);
+        lcd.clear();
+        lcd.print(" Password based");
+        lcd.setCursor(0,1);
+        lcd.print("Door Lock System");
+      }
+      else
+      {
+        lcd.clear();
+        lcd.print("   Wrong Otp");
+        delay(3000);
+        lcd.clear();
+        lcd.print(" Password based");
+        lcd.setCursor(0,1);
+        lcd.print("Door Lock System");
+      }
+    }
+}
